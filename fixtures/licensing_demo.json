@@ -1,0 +1,55 @@
+{
+  "description": "核技术应用许可与流转授权链演示剧本：合法交接、缺口审查、迟到补录、撤销阻断与历史重建",
+  "clock": "2026-03-01T08:00:00Z",
+  "users": [
+    {"user_id": "reg", "display_name": "登记员", "role": "registry"},
+    {"user_id": "disp", "display_name": "调度员", "role": "dispatcher"},
+    {"user_id": "comp", "display_name": "合规专员", "role": "compliance"},
+    {"user_id": "aud", "display_name": "审计员", "role": "auditor"}
+  ],
+  "organizations": [
+    {"org_id": "nuc-src", "name": "同位素源生产单位", "kind": "enterprise"},
+    {"org_id": "med-a", "name": "医院甲核医学科", "kind": "medical"},
+    {"org_id": "med-b", "name": "医院乙放疗中心", "kind": "medical"},
+    {"org_id": "trans-co", "name": "核品运输公司", "kind": "carrier"}
+  ],
+  "sites": [
+    {"site_id": "site-a", "org_id": "med-a", "name": "医院甲乙级非密封源工作场所", "valid_from": "2025-01-01T00:00:00Z", "valid_to": "2028-01-01T00:00:00Z"},
+    {"site_id": "site-b", "org_id": "med-b", "name": "医院乙辐照加工场所", "valid_from": "2025-01-01T00:00:00Z", "valid_to": "2028-01-01T00:00:00Z"}
+  ],
+  "licenses": [
+    {"license_id": "L-SRC", "license_no": "国环辐证[源]0001", "holder_org_id": "nuc-src", "valid_from": "2025-01-01T00:00:00Z", "valid_to": "2029-01-01T00:00:00Z", "document_ref": "批文-SRC-2025-01",
+     "scopes": [{"activity": "transfer", "item_code": "IR-192-SEALED", "document_ref": "批文-SRC-2025-01/范围"}]},
+    {"license_id": "L-CAR", "license_no": "危货运输证 0007", "holder_org_id": "trans-co", "valid_from": "2025-01-01T00:00:00Z", "valid_to": "2029-01-01T00:00:00Z", "document_ref": "批文-CAR-2025-09",
+     "scopes": [{"activity": "transport", "item_code": "IR-192-SEALED", "document_ref": "批文-CAR-2025-09/范围"}]},
+    {"license_id": "L-A", "license_no": "国环辐证[甲]0042", "holder_org_id": "med-a", "valid_from": "2025-06-01T00:00:00Z", "valid_to": "2028-06-01T00:00:00Z", "document_ref": "批文-MEDA-2025-06",
+     "scopes": [
+       {"activity": "use", "item_code": "IR-192-SEALED", "document_ref": "批文-MEDA-2025-06/场所", "site_id": "site-a"}
+     ]},
+    {"license_id": "L-B", "license_no": "国环辐证[乙]0108", "holder_org_id": "med-b", "valid_from": "2025-03-01T00:00:00Z", "valid_to": "2028-03-01T00:00:00Z", "document_ref": "批文-MEDB-2025-03",
+     "scopes": [
+       {"activity": "transfer", "item_code": "IR-192-SEALED", "document_ref": "批文-MEDB-2025-03/范围"},
+       {"activity": "use", "item_code": "IR-192-SEALED", "document_ref": "批文-MEDB-2025-03/场所", "site_id": "site-b"}
+     ]}
+  ],
+  "batches": [
+    {"batch_id": "B-IR192-01", "item_code": "IR-192-SEALED", "product_name": "铱-192 密封源", "nuclide": "Ir-192", "origin_org_id": "nuc-src", "produced_at": "2026-02-20T00:00:00Z"}
+  ],
+  "script": [
+    {"at": "2026-03-03T09:30:00Z", "action": "record_handoff", "actor": "disp",
+     "payload": {"handoff_id": "H-0001", "batch_id": "B-IR192-01", "from_org_id": "nuc-src", "to_org_id": "med-a", "carrier_org_id": "trans-co", "site_id": "site-a", "occurred_at": "2026-03-02T10:00:00Z", "evidence_doc": "交接单 H-0001", "idempotency_key": "handoff-0001"},
+     "expect": {"status": "incomplete", "late_evidence": true, "missing_code": "license.transfer.missing"}},
+    {"at": "2026-03-06T14:00:00Z", "action": "open_and_close_review", "actor": "comp",
+     "payload": {"review_id": "R-2026-009", "batch_id": "B-IR192-01", "as_of": "2026-03-05T00:00:00Z"},
+     "expect": {"frozen_status": "incomplete"}},
+    {"at": "2026-03-08T10:00:00Z", "action": "backfill_scope", "actor": "reg",
+     "payload": {"license_id": "L-A", "activity": "transfer", "item_code": "IR-192-SEALED", "document_ref": "批文-MEDA-2025-01/补录", "backfilled": true},
+     "expect": {"frozen_status_unchanged": "incomplete", "current_view": "authorized"}},
+    {"at": "2026-03-10T11:00:00Z", "action": "revoke_license", "actor": "reg",
+     "payload": {"license_id": "L-A", "effective_at": "2026-03-11T00:00:00Z", "reason": "监督检查发现辐射安全隐患"},
+     "expect": {"later_handoff": "blocked", "prior_handoff": "still_authorized"}},
+    {"at": "2026-03-12T09:00:00Z", "action": "authorize", "actor": "aud",
+     "payload": {"batch_id": "B-IR192-01", "org_id": "med-a", "activity": "use", "as_of": "2026-03-12T00:00:00Z", "site_id": "site-a"},
+     "expect": {"authorized": false, "finding": "license.revoked"}}
+  ]
+}
